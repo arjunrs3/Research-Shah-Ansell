@@ -15,55 +15,6 @@ def plot3d(xcoords: array, ycoords: array, zcoords: array, scatter1: array, scat
     ax.scatter3D(scatter1, scatter2, scatter3, c = scatter3, cmap = 'Reds', s=0.5)
     plt.show()
 
-
-def interpolate_airfoils(input_json_file_name: str, output_json_file_name: str, no_of_output_sections):
-    interpx = [] #list of x values to interpolate along 
-    interpy = [] #list of y values to interpolate along
-    interpz = [] #list of z values that the final interpolation function depends on 
-    railx = [] #List of x coordinates of the lines that connect sections (includes interpolated sections)
-    raily = [] #List of y coordinates of the lines that connect sections (includes interpolated sections)
-    railz = [] #List of z coordinates of the lines that connect sections (includes interpolated sections)
-    originalx = [] #only kept for plotting purposes 
-    originaly = [] #only kept for plotting purposes
-    originalz = [] #only kept for plotting purposes
-    tempsection = [] #takes the rail data from only one section
-    final_data = [] #output
-    with open(input_json_file_name, 'r') as f:
-        airfoil_data_dict = json.load(f)
-    no_sections = len(airfoil_data_dict["airfoil_coords"])
-    span = airfoil_data_dict["span_ft"]
-    spacing = airfoil_data_dict["2y_over_b"]
-    zvalues = np.multiply(spacing, span / 2)
-    newz = np.linspace(0, zvalues[len(zvalues)-1], no_of_output_sections)
-    for point in range(len(airfoil_data_dict["airfoil_coords"][0])): 
-        interpx.clear()
-        interpy.clear()
-        interpz.clear()
-        for section in range(no_sections): 
-            interpx.append(airfoil_data_dict["airfoil_coords"][section][point][0])
-            interpy.append(airfoil_data_dict["airfoil_coords"][section][point][1])
-            interpz.append(zvalues[section])
-            originalx.append(airfoil_data_dict["airfoil_coords"][section][point][0])
-            originaly.append(airfoil_data_dict["airfoil_coords"][section][point][1])
-            originalz.append(zvalues[section])
-        fx = interpolate.interp1d(interpz, interpx, 'quadratic')
-        fy = interpolate.interp1d(interpz, interpy, 'quadratic')
-        newx = fx(newz)
-        newy = fy(newz)
-        railx.extend(newx)
-        raily.extend(newy)
-        railz.extend(newz)
-    for i in range(len(newz)):
-        tempsection = []
-        for c in range(len(railx)- i):
-            if ((c) % len(newz) == 0):
-                tempsection.append([railx[c+i], raily[c+i], railz[c+i]])
-        final_data.append(tempsection)
-    plot3d(railz, railx, raily, originalz, originalx, originaly)
-
-    with open(output_json_file_name, 'w') as f:
-        json.dump([final_data], f, indent=4)
-
 #Outdated, was used as preliminary validation of the x and y coordinates transferring correctly
 #meant to open interpolated.json with the same number of sections, thus the interpolation should yield the same document
 #still works to check x and y coordinates, but has not been updated for non-constant section spacing
@@ -125,6 +76,7 @@ def interpolate_airfoils_symmetry(input_json_file_name: str, output_json_file_na
     originalz = [] #only kept for plotting purposes
     tempsection = [] #takes the rail data from only one section
     final_data = [] #output
+    final_spacing = [] #final spacing
     newz = [] #new z values for output sections
     with open(input_json_file_name, 'r') as f:
         airfoil_data_dict = json.load(f)
@@ -181,15 +133,17 @@ def interpolate_airfoils_symmetry(input_json_file_name: str, output_json_file_na
         tempsection = []
         for c in range(len(railx)- i):
             if ((c % len(newz) == 0) and (railz[c+i] >= 0)):
-                tempsection.append([railx[c+i], raily[c+i], railz[c+i]])
+                tempsection.append([railx[c+i], raily[c+i]])
+        if(newz[i] >=0): 
+            final_spacing.append(newz[i])
         if (len(tempsection) > 1):
             final_data.append(tempsection)
-
+    final_spacing = np.multiply(final_spacing, 2/span)
     #plot the points on the rails and the original sections for validation
     plot3d(railz, railx, raily, originalz, originalx, originaly)
 
     with open(output_json_file_name, 'w') as f:
-        json.dump([final_data], f, indent=4)
+        json.dump({"2y_over_b": final_spacing.tolist(), "airfoil_coords": final_data}, f, indent=4)
 
 interpolate_airfoils_symmetry("airfoil_data.json", "interpolated.json", 40)
 #check("interpolated.json", "check.json")
