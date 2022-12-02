@@ -16,7 +16,7 @@ def plot3d(xcoords: array, ycoords: array, zcoords: array, scatter1: array, scat
     plt.show()
 
 
-def interpolate_airfoils(input_json_file_name: str, output_json_file_name: str):
+def interpolate_airfoils(input_json_file_name: str, output_json_file_name: str, no_of_output_sections):
     interpx = []
     interpy = []
     interpz = []
@@ -31,8 +31,10 @@ def interpolate_airfoils(input_json_file_name: str, output_json_file_name: str):
     with open(input_json_file_name, 'r') as f:
         airfoil_data_dict = json.load(f)
     no_sections = len(airfoil_data_dict["airfoil_coords"])
-    zvalues = np.linspace(0, 150, no_sections)
-    newz = np.linspace(0, 150, 20)
+    span = airfoil_data_dict["span_ft"]
+    spacing = airfoil_data_dict["2y_over_b"]
+    zvalues = np.multiply(spacing, span / 2)
+    newz = np.linspace(0, zvalues[len(zvalues)-1], no_of_output_sections)
     for point in range(len(airfoil_data_dict["airfoil_coords"][0])): 
         interpx.clear()
         interpy.clear()
@@ -78,7 +80,7 @@ def check(input_json_file_name: str, output_json_file_name: str):
         airfoil_data_dict = json.load(f)
     no_sections = len(airfoil_data_dict[0])
     zvalues = np.linspace(0, 150, no_sections)
-    newz = np.linspace(0, 150, 20)
+    newz = np.linspace(0, 150, 150)
     for point in range(len(airfoil_data_dict[0][0])): 
         interpx.clear()
         interpy.clear()
@@ -103,10 +105,10 @@ def check(input_json_file_name: str, output_json_file_name: str):
             if ((c) % len(newz) == 0):
                 tempsection.append([railx[c+i], raily[c+i], railz[c+i]])
         final_data.append(tempsection)
-    plot3d(railz, railx, raily, originalz, originalx, originaly)   
+    #plot3d(railz, railx, raily, originalz, originalx, originaly)   
     with open(output_json_file_name, 'w') as f:
         json.dump([final_data], f, indent=4)  
 
   
-interpolate_airfoils("airfoil_data2.json", "interpolated.json")
-check("interpolated.json", "check.json")
+interpolate_airfoils("airfoil_data.json", "interpolated.json", 50)
+#check("interpolated.json", "check.json")
