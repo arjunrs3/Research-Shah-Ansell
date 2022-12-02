@@ -12,7 +12,7 @@ def plot3d(xcoords: array, ycoords: array, zcoords: array, scatter1: array, scat
     fig = plt.figure()
     ax = plt.axes(projection='3d')
     ax.scatter3D(xcoords, ycoords, zcoords, c = zcoords, cmap = 'Blues')
-    ax.scatter3D(scatter1, scatter2, scatter3, c = scatter3, cmap = 'Reds')
+    ax.scatter3D(scatter1, scatter2, scatter3, c = scatter3, cmap = 'Reds', s=0.5)
     plt.show()
 
 
@@ -64,6 +64,9 @@ def interpolate_airfoils(input_json_file_name: str, output_json_file_name: str, 
     with open(output_json_file_name, 'w') as f:
         json.dump([final_data], f, indent=4)
 
+#Outdated, was used as preliminary validation of the x and y coordinates transferring correctly
+#meant to open interpolated.json with the same number of sections, thus the interpolation should yield the same document
+#still works to check x and y coordinates, but has not been updated for non-constant section spacing
 def check(input_json_file_name: str, output_json_file_name: str): 
     interpx = []
     interpy = []
@@ -122,6 +125,7 @@ def interpolate_airfoils_symmetry(input_json_file_name: str, output_json_file_na
     originalz = [] #only kept for plotting purposes
     tempsection = [] #takes the rail data from only one section
     final_data = [] #output
+    newz = [] #new z values for output sections
     with open(input_json_file_name, 'r') as f:
         airfoil_data_dict = json.load(f)
     no_sections = len(airfoil_data_dict["airfoil_coords"]) * 2 -1
@@ -134,7 +138,14 @@ def interpolate_airfoils_symmetry(input_json_file_name: str, output_json_file_na
     spacing = np.concatenate((spacing, positivespacing))
     zvalues = np.multiply(spacing, span / 2)
     # generating z values for new sections
-    newz = np.linspace(zvalues[0], zvalues[len(zvalues)-1], no_of_output_sections * 2 -1)
+    output_sections_per_input = int(no_of_output_sections / len(airfoil_data_dict["airfoil_coords"])) + 1
+    # generate same amount of output sections for input sections with linear spacing in between sections
+    print(f"output sections per input: {output_sections_per_input}")
+    for i in range(len(zvalues)-1): 
+        newz.extend(np.linspace(zvalues[i], zvalues[i+1], output_sections_per_input, endpoint=False))
+    # include the last zvalue as well (last original airfoil)
+    newz.append(zvalues[len(zvalues)-1])
+    # newz = np.linspace(zvalues[0], zvalues[len(zvalues)-1], no_of_output_sections * 2 -1)
     for point in range(len(airfoil_data_dict["airfoil_coords"][0])): 
         interpx.clear()
         interpy.clear()
@@ -180,5 +191,5 @@ def interpolate_airfoils_symmetry(input_json_file_name: str, output_json_file_na
     with open(output_json_file_name, 'w') as f:
         json.dump([final_data], f, indent=4)
 
-interpolate_airfoils_symmetry("airfoil_data.json", "interpolated.json", 150)
+interpolate_airfoils_symmetry("airfoil_data.json", "interpolated.json", 40)
 #check("interpolated.json", "check.json")
